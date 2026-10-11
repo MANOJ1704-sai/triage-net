@@ -321,8 +321,9 @@ occupied_beds = len(sorted_patients)
 occupancy_rate = min(int((occupied_beds / TOTAL_ICU_BEDS) * 100), 100)
 
 # --- 5. Dashboard View ---
-st.markdown("<h2 style='margin-bottom: 0px;'>❤️ TriageNet</h2>", unsafe_allow_html=True)
-st.markdown('<p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">ICU Command Center • Powered by Neural Triage v3.4 • <span style="color: #3b82f6;">●</span> Real-time telemetry</p>', unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; margin-bottom: 5px;'>TriageNet</h1>", unsafe_allow_html=True)
+st.markdown("<h2 style='margin-bottom: 0px;'>❤️ ICU Command Center</h2>", unsafe_allow_html=True)
+st.markdown('<p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">Powered by Neural Triage v3.4 • <span style="color: #3b82f6;">●</span> Real-time telemetry</p>', unsafe_allow_html=True)
 
 total_patients = len(sorted_patients)
 critical_count = sum(1 for p in sorted_patients if p.get('risk') == 'CRITICAL')
