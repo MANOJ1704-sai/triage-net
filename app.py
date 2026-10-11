@@ -131,7 +131,7 @@ components.html("""
 </script>
 """, height=0, width=0)
 
-# --- 2. Database Functions ---
+# --- 2. Database & Sequential ID Functions ---
 DB_FILE = 'patients_db.csv'
 
 def load_database():
@@ -145,10 +145,22 @@ def save_database(patients_list):
     except Exception:
         pass
 
+def get_next_sequential_id(patients_list):
+    start_id = 2700001
+    existing_ids = []
+    for p in patients_list:
+        try:
+            p_id = int(str(p.get('id', '')).strip())
+            if p_id >= 2700000:
+                existing_ids.append(p_id)
+        except ValueError:
+            pass
+    if existing_ids:
+        return str(max(existing_ids) + 1)
+    return str(start_id)
+
 if 'patients' not in st.session_state:
     st.session_state.patients = load_database()
-if 'new_patient_id' not in st.session_state:
-    st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
 
 # --- 3. Load ML Models ---
 @st.cache_resource
@@ -170,7 +182,8 @@ st.sidebar.caption("Select Diagnostic Tool:")
 assessment_type = st.sidebar.radio("", ["Track A: Heart Disease", "Track B: Diabetes", "Track C: Text Triage"], label_visibility="collapsed")
 st.sidebar.write("---")
 
-patient_id = st.sidebar.text_input("Patient ID Number", st.session_state.new_patient_id)
+next_auto_id = get_next_sequential_id(st.session_state.patients)
+patient_id = st.sidebar.text_input("Patient ID Number", next_auto_id)
 
 # Dynamic Default Room/Bed Generator
 next_bed_num = len(st.session_state.patients) + 1
@@ -204,12 +217,12 @@ if assessment_type == "Track A: Heart Disease":
             risk_level = "CRITICAL" if pred == 1 and prob[1] > 0.8 else ("HIGH" if pred == 1 else "ROUTINE")
             
             st.session_state.patients.append({
-                "id": patient_id, "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
+                "id": patient_id if patient_id.strip() else next_auto_id,
+                "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": str(thalach), "rr": str(random.randint(12, 25)), "spo2": str(random.randint(90, 99)), 
                 "bp": f"{trestbps}/80", "temp": "37.0", "note": f"Heart AI - Conf: {prob[1]*100:.1f}%"
             })
             save_database(st.session_state.patients)
-            st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
 elif assessment_type == "Track B: Diabetes":
@@ -231,11 +244,11 @@ elif assessment_type == "Track B: Diabetes":
             risk_level = "HIGH" if pred == 1 else "ROUTINE"
             
             st.session_state.patients.append({
-                "id": patient_id, "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
+                "id": patient_id if patient_id.strip() else next_auto_id,
+                "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "75", "rr": "16", "spo2": "98", "bp": f"{bp}/60", "temp": "36.8", "note": f"Diabetes AI - Conf: {prob[1]*100:.1f}%"
             })
             save_database(st.session_state.patients)
-            st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
 elif assessment_type == "Track C: Text Triage":
@@ -247,11 +260,11 @@ elif assessment_type == "Track C: Text Triage":
             risk_level = "CRITICAL" if pred == 1 else "ROUTINE"
             
             st.session_state.patients.append({
-                "id": patient_id, "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
+                "id": patient_id if patient_id.strip() else next_auto_id,
+                "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "N/A", "rr": "N/A", "spo2": "N/A", "bp": "N/A", "temp": "N/A", "note": "NLP Text Triage Used"
             })
             save_database(st.session_state.patients)
-            st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
 # --- Sort Patients by Risk Priority (CRITICAL -> HIGH -> ROUTINE) ---
@@ -298,6 +311,21 @@ left_col, right_col = st.columns([1.8, 1])
 
 with left_col:
     st.markdown('#### Patient Status Feed &nbsp;&nbsp;<span style="color: #3b82f6; font-size: 12px; font-weight: normal;">● Prioritized by Severity</span>', unsafe_allow_html=True)
+    
+    # Discharge / Delete Patient Control Header
+    with st.expander("🗑️ Patient Discharge / Management Panel"):
+        if sorted_patients:
+            patient_options = [f"ID: {p.get('id')} ({p.get('risk', 'ROUTINE')} - {p.get('room', '')}/{p.get('bed', '')})" for p in sorted_patients]
+            selected_to_delete = st.selectbox("Select Patient to Discharge:", patient_options)
+            if st.button("Discharge Selected Patient"):
+                selected_id = selected_to_delete.split(" ")[1]
+                st.session_state.patients = [p for p in st.session_state.patients if str(p.get('id')) != str(selected_id)]
+                save_database(st.session_state.patients)
+                st.success(f"Patient {selected_id} discharged successfully.")
+                st.rerun()
+        else:
+            st.info("No active patients to manage.")
+
     html_code = """
     <!DOCTYPE html>
     <html>
@@ -346,7 +374,7 @@ with left_col:
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center space-x-3">
                     <span class="px-3 py-1 rounded-lg text-xs font-bold uppercase {tag_bg}">{risk}</span>
-                    <h3 class="text-lg font-bold font-[JetBrains Mono] tracking-wide text-white">Patient {p.get('id', 'N/A')}</h3>
+                    <h3 class="text-lg font-bold font-[JetBrains Mono] tracking-wide text-white">Patient #{p.get('id', 'N/A')}</h3>
                     <span class="text-xs bg-slate-800/90 text-blue-400 px-2.5 py-1 rounded-md border border-slate-700 font-medium">🚪 {room}</span>
                     <span class="text-xs bg-slate-800/90 text-emerald-400 px-2.5 py-1 rounded-md border border-slate-700 font-medium">🛌 {bed}</span>
                 </div>
