@@ -88,12 +88,14 @@ st.markdown("""
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        min-height: 120px;
     }
     .metric-card h4 { margin: 0; font-size: 13px; color: #94a3b8; font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;}
     .metric-card h2 { margin: 10px 0 0 0; font-size: 36px; font-weight: 800; font-family: 'JetBrains Mono', monospace;}
     
     .badge-green { background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; vertical-align: middle;}
     .badge-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; vertical-align: middle;}
+    .badge-amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-left: 10px; vertical-align: middle;}
     
     header {background-color: transparent !important;}
     #MainMenu {visibility: hidden;}
@@ -330,7 +332,7 @@ low_count = sum(1 for p in sorted_patients if p.get('risk') == 'ROUTINE')
 col1, col2, col3, col4 = st.columns(4)
 with col1: st.markdown(f'<div class="metric-card"><h4>PATIENTS TODAY</h4><div><h2 style="color:white; display:inline;">{total_patients}</h2><span class="badge-green">+12%</span></div></div>', unsafe_allow_html=True)
 with col2: st.markdown(f'<div class="metric-card"><h4>CRITICAL RISK</h4><div><h2 style="color:#ef4444; display:inline;">{critical_count}</h2><span class="badge-red">-3%</span></div></div>', unsafe_allow_html=True)
-with col3: st.markdown(f'<div class="metric-card"><h4>HIGH RISK</h4><div><h2 style="color:#f59e0b; display:inline;">{high_count}</h2></div></div>', unsafe_allow_html=True)
+with col3: st.markdown(f'<div class="metric-card"><h4>HIGH RISK</h4><div><h2 style="color:#f59e0b; display:inline;">{high_count}</h2><span class="badge-amber">MONITORED</span></div></div>', unsafe_allow_html=True)
 with col4: st.markdown(f'<div class="metric-card"><h4>BED OCCUPANCY</h4><div><h2 style="color:white; display:inline;">{occupancy_rate}%</h2><span class="badge-green">{occupied_beds}/{TOTAL_ICU_BEDS} BEDS</span></div></div>', unsafe_allow_html=True)
 
 st.write("---")
