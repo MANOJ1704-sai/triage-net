@@ -1,0 +1,15 @@
+id,risk,score,hr,rr,spo2,bp,temp,note
+32933378,HIGH,7,200,13,92,195/80,37.0,Heart AI - Conf: 74.0%
+31369076,HIGH,7,200,16,95,195/80,37.0,Heart AI - Conf: 74.0%
+5386535686,HIGH,7,200,24,91,195/80,37.0,Heart AI - Conf: 74.0%
+1234567,ROUTINE,7,188,22,99,181/80,37.0,Heart AI - Conf: 28.0%
+39413999,HIGH,7,75,16,98,82/60,36.8,Diabetes AI - Conf: 70.0%
+34903242,HIGH,7,75,16,98,82/60,36.8,Diabetes AI - Conf: 70.0%
+30049356,CRITICAL,9,135,28,88,85/50,39.1,Heart AI - Conf: 92.4% (Severe Tachycardia)
+30006565,HIGH,7,110,22,94,145/90,38.2,Diabetes AI - Conf: 76.5% (Elevated Glucose)
+30224466,CRITICAL,8,45,10,85,90/60,35.5,NLP Text Triage - Conf: 88.0% (Respiratory Distress)
+30998877,HIGH,6,95,20,95,130/85,37.8,Heart AI - Conf: 65.0%
+30776655,HIGH,5,88,18,96,135/88,37.5,NLP Text Triage - Conf: 55.4% (Mild Angina)
+30112233,LOW,2,72,16,98,118/78,36.6,Heart AI - Conf: 15.2% (Routine)
+30881122,LOW,3,78,15,97,122/80,37.0,Heart AI - Conf: 25.1%
+30554433,LOW,1,68,14,99,110/70,36.8,Diabetes AI - Conf: 12.0%
