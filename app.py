@@ -150,6 +150,7 @@ def save_database(patients_list):
 def clean_existing_patient_ids(patients_list):
     updated = False
     current_id = BASE_START_ID
+    doctors = ["Dr. Rajesh Sharma (Cardiologist)", "Dr. Priya Nair (Endocrinologist)", "Dr. Vikram Mehta (Emergency)"]
     for p in patients_list:
         raw_id = str(p.get('id', '')).strip()
         try:
@@ -165,6 +166,11 @@ def clean_existing_patient_ids(patients_list):
             p['id'] = str(current_id)
             updated = True
             current_id += 1
+            
+        if not p.get('doctor'):
+            p['doctor'] = random.choice(doctors)
+            updated = True
+            
     if updated:
         save_database(patients_list)
     return patients_list
@@ -222,6 +228,7 @@ if is_bed_taken:
     st.sidebar.error(f"⚠️ {room_no} - {bed_no} is ALREADY OCCUPIED!")
 
 if assessment_type == "Track A: Heart Disease":
+    assigned_doc = "Dr. Rajesh Sharma (Cardiologist)"
     age = st.sidebar.slider("Age", 20, 100, 50)
     sex = st.sidebar.selectbox("Sex (1=M, 0=F)", [1, 0])
     cp = st.sidebar.selectbox("Chest Pain (1-4)", [1, 2, 3, 4])
@@ -248,12 +255,14 @@ if assessment_type == "Track A: Heart Disease":
                 "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": str(thalach), "rr": str(random.randint(12, 25)), "spo2": str(random.randint(90, 99)), 
-                "bp": f"{trestbps}/80", "temp": "37.0", "note": f"Heart AI - Conf: {prob[1]*100:.1f}%"
+                "bp": f"{trestbps}/80", "temp": "37.0", "note": f"Heart AI - Conf: {prob[1]*100:.1f}%",
+                "doctor": assigned_doc
             })
             save_database(st.session_state.patients)
             st.rerun()
 
 elif assessment_type == "Track B: Diabetes":
+    assigned_doc = "Dr. Priya Nair (Endocrinologist)"
     preg = st.sidebar.slider("Pregnancies", 0, 20, 1)
     gluc = st.sidebar.slider("Glucose", 0, 250, 120)
     bp = st.sidebar.slider("Blood Pressure", 0, 150, 70)
@@ -274,12 +283,14 @@ elif assessment_type == "Track B: Diabetes":
             st.session_state.patients.append({
                 "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
-                "hr": "75", "rr": "16", "spo2": "98", "bp": f"{bp}/60", "temp": "36.8", "note": f"Diabetes AI - Conf: {prob[1]*100:.1f}%"
+                "hr": "75", "rr": "16", "spo2": "98", "bp": f"{bp}/60", "temp": "36.8", "note": f"Diabetes AI - Conf: {prob[1]*100:.1f}%",
+                "doctor": assigned_doc
             })
             save_database(st.session_state.patients)
             st.rerun()
 
 elif assessment_type == "Track C: Text Triage":
+    assigned_doc = "Dr. Vikram Mehta (Emergency)"
     clinical_text = st.sidebar.text_area("Patient Notes / Symptoms:")
     if st.sidebar.button("Run AI & Add Patient", disabled=is_bed_taken):
         if models['text'] and clinical_text:
@@ -290,7 +301,8 @@ elif assessment_type == "Track C: Text Triage":
             st.session_state.patients.append({
                 "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
-                "hr": "N/A", "rr": "N/A", "spo2": "N/A", "bp": "N/A", "temp": "N/A", "note": "NLP Text Triage Used"
+                "hr": "N/A", "rr": "N/A", "spo2": "N/A", "bp": "N/A", "temp": "N/A", "note": "NLP Text Triage Used",
+                "doctor": assigned_doc
             })
             save_database(st.session_state.patients)
             st.rerun()
@@ -387,6 +399,7 @@ with left_col:
         risk = p.get('risk', 'ROUTINE')
         room = p.get('room', f"ICU {(idx // 5) + 1}")
         bed = p.get('bed', f"Bed {(idx % 5) + 1}")
+        doctor_name = p.get('doctor', 'Dr. Rajesh Sharma (Cardiologist)')
         
         if risk == 'CRITICAL':
             border_color, tag_bg, text_color, glow = "border-l-red-500", "bg-red-500 text-white animate-pulse", "text-red-400", "shadow-lg shadow-red-900/20"
@@ -416,7 +429,10 @@ with left_col:
                 <div><p class="text-xs text-slate-400 mb-1">🩺 BP</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p.get('bp', 'N/A')}</p></div>
                 <div><p class="text-xs text-slate-400 mb-1">🌡️ TEMP</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p.get('temp', 'N/A')}</p></div>
             </div>
-            <div class="mt-3 text-xs {text_color} bg-slate-900/50 p-2 rounded-lg border border-slate-800/50"><strong>AI Note:</strong> {p.get('note', '')}</div>
+            <div class="mt-3 flex items-center justify-between gap-2">
+                <div class="text-xs {text_color} bg-slate-900/50 p-2 rounded-lg border border-slate-800/50 flex-1"><strong>AI Note:</strong> {p.get('note', '')}</div>
+                <div class="text-xs text-indigo-300 bg-indigo-950/60 p-2 rounded-lg border border-indigo-800/50 font-medium">👨‍⚕️ <strong>Assigned:</strong> {doctor_name}</div>
+            </div>
         </div>
         """
     html_code += "</div></body></html>"
@@ -469,7 +485,6 @@ with right_col:
 
     fig = go.Figure()
 
-    # Loop through each of the 5 bed positions (Bed 1 to Bed 5)
     for bed_idx in range(1, 6):
         bed_name = f"Bed {bed_idx}"
         
@@ -486,16 +501,18 @@ with right_col:
             )
             
             x_rooms.append(room_name)
-            y_vals.append(1)  # Height unit of 1 per bed slot
+            y_vals.append(1)
             
             if matched_patient:
                 risk = matched_patient.get('risk', 'ROUTINE')
                 p_id = matched_patient.get('id', 'N/A')
+                doc = matched_patient.get('doctor', 'Unassigned')
                 colors.append(color_map.get(risk, "#3b82f6"))
                 hover_texts.append(
                     f"<b>{room_name}</b> - <b>{bed_name}</b><br>"
                     f"Patient ID: #{p_id}<br>"
-                    f"Condition: <b>{risk}</b>"
+                    f"Condition: <b>{risk}</b><br>"
+                    f"Doctor: {doc}"
                 )
             else:
                 colors.append(color_map["Available"])
@@ -504,7 +521,6 @@ with right_col:
                     f"Status: <b>Available</b>"
                 )
 
-        # Add a trace for this bed stack level
         fig.add_trace(go.Bar(
             x=x_rooms,
             y=y_vals,
@@ -514,7 +530,6 @@ with right_col:
             showlegend=False
         ))
 
-    # Add custom legend keys for conditions
     for status, color in color_map.items():
         fig.add_trace(go.Bar(
             x=[None], y=[None],
