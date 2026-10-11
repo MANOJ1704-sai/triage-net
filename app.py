@@ -28,7 +28,7 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
     }
 
-    /* Radio Button Custom Styling to Match UI Design */
+    /* Radio Button Custom Styling */
     section[data-testid="stSidebar"] [role="radiogroup"] {
         gap: 8px !important;
     }
@@ -172,7 +172,6 @@ st.sidebar.write("---")
 
 patient_id = st.sidebar.text_input("Patient ID Number", st.session_state.new_patient_id)
 
-# NEW: Room & Bed Number Inputs
 col_room, col_bed = st.sidebar.columns(2)
 with col_room:
     room_no = st.text_input("Room No.", "ICU-101")
@@ -253,7 +252,7 @@ elif assessment_type == "Track C: Text Triage":
             st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
-# --- NEW: SORT PATIENTS BY RISK PRIORITY (CRITICAL -> HIGH -> ROUTINE) ---
+# --- Sort Patients by Risk Priority (CRITICAL -> HIGH -> ROUTINE) ---
 risk_priority = {"CRITICAL": 0, "HIGH": 1, "ROUTINE": 2}
 sorted_patients = sorted(
     st.session_state.patients, 
@@ -374,7 +373,7 @@ with right_col:
         else:
             color, shadow, anim = "#10b981", "rgba(16, 185, 129, 0.2)", ""
             
-        grid_html += f'<div title="Patient {p.get("id")} ({p.get("room", "")}-{p.get("bed", "")}) " style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
+        grid_html += f'<div title="Patient {p.get("id")} ({p.get("room", "")}-{p.get("bed", "")})" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
     
     grid_html += """
         <style>
@@ -407,7 +406,4 @@ with right_col:
     st.markdown("""
         <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07);">
             <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Emergency</p>
-            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #ef4444; width: 85%; height: 100%; border-radius: 10px;"></div></div>
-            
-            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Cardiology</p>
-            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div></div>
+            <div style="background-color: rgba(30, 41, 59, 0.
