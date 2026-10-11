@@ -185,7 +185,6 @@ st.sidebar.write("---")
 next_auto_id = get_next_sequential_id(st.session_state.patients)
 patient_id = st.sidebar.text_input("Patient ID Number", next_auto_id)
 
-# Select Dropdowns for ICU Room (1-4) and Bed No (1-5)
 col_room, col_bed = st.sidebar.columns(2)
 with col_room:
     room_no = st.selectbox("Select ICU Room", ["ICU 1", "ICU 2", "ICU 3", "ICU 4"])
@@ -311,7 +310,6 @@ left_col, right_col = st.columns([1.8, 1])
 with left_col:
     st.markdown('#### Patient Status Feed &nbsp;&nbsp;<span style="color: #3b82f6; font-size: 12px; font-weight: normal;">● Prioritized by Severity</span>', unsafe_allow_html=True)
     
-    # Discharge / Delete Patient Control Header
     with st.expander("🗑️ Patient Discharge / Management Panel"):
         if sorted_patients:
             patient_options = [f"ID: {p.get('id')} ({p.get('risk', 'ROUTINE')} - {p.get('room', 'ICU 1')}/{p.get('bed', 'Bed 1')})" for p in sorted_patients]
