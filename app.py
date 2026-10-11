@@ -169,7 +169,15 @@ st.sidebar.markdown('## 🩺 AI Assessment Panel')
 st.sidebar.caption("Select Diagnostic Tool:")
 assessment_type = st.sidebar.radio("", ["Track A: Heart Disease", "Track B: Diabetes", "Track C: Text Triage"], label_visibility="collapsed")
 st.sidebar.write("---")
+
 patient_id = st.sidebar.text_input("Patient ID Number", st.session_state.new_patient_id)
+
+# NEW: Room & Bed Number Inputs
+col_room, col_bed = st.sidebar.columns(2)
+with col_room:
+    room_no = st.text_input("Room No.", "ICU-101")
+with col_bed:
+    bed_no = st.text_input("Bed No.", "B-04")
 
 if assessment_type == "Track A: Heart Disease":
     age = st.sidebar.slider("Age", 20, 100, 50)
@@ -194,8 +202,8 @@ if assessment_type == "Track A: Heart Disease":
             prob = models['heart'].predict_proba(input_data)[0]
             risk_level = "CRITICAL" if pred == 1 and prob[1] > 0.8 else ("HIGH" if pred == 1 else "ROUTINE")
             
-            st.session_state.patients.insert(0, {
-                "id": patient_id, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
+            st.session_state.patients.append({
+                "id": patient_id, "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": str(thalach), "rr": str(random.randint(12, 25)), "spo2": str(random.randint(90, 99)), 
                 "bp": f"{trestbps}/80", "temp": "37.0", "note": f"Heart AI - Conf: {prob[1]*100:.1f}%"
             })
@@ -221,8 +229,8 @@ elif assessment_type == "Track B: Diabetes":
             prob = models['diabetes'].predict_proba(input_data)[0]
             risk_level = "HIGH" if pred == 1 else "ROUTINE"
             
-            st.session_state.patients.insert(0, {
-                "id": patient_id, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
+            st.session_state.patients.append({
+                "id": patient_id, "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "75", "rr": "16", "spo2": "98", "bp": f"{bp}/60", "temp": "36.8", "note": f"Diabetes AI - Conf: {prob[1]*100:.1f}%"
             })
             save_database(st.session_state.patients)
@@ -237,22 +245,29 @@ elif assessment_type == "Track C: Text Triage":
             prob = models['text'].predict_proba([clinical_text])[0]
             risk_level = "CRITICAL" if pred == 1 else "ROUTINE"
             
-            st.session_state.patients.insert(0, {
-                "id": patient_id, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
+            st.session_state.patients.append({
+                "id": patient_id, "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "N/A", "rr": "N/A", "spo2": "N/A", "bp": "N/A", "temp": "N/A", "note": "NLP Text Triage Used"
             })
             save_database(st.session_state.patients)
             st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
+# --- NEW: SORT PATIENTS BY RISK PRIORITY (CRITICAL -> HIGH -> ROUTINE) ---
+risk_priority = {"CRITICAL": 0, "HIGH": 1, "ROUTINE": 2}
+sorted_patients = sorted(
+    st.session_state.patients, 
+    key=lambda x: (risk_priority.get(x.get('risk', 'ROUTINE'), 2), -int(x.get('score', 0)))
+)
+
 # --- 5. Dashboard View ---
 st.markdown("<h2 style='margin-bottom: 0px;'>❤️ ICU Command Center</h2>", unsafe_allow_html=True)
 st.markdown('<p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">Powered by Neural Triage v3.4 • <span style="color: #3b82f6;">●</span> Real-time telemetry</p>', unsafe_allow_html=True)
 
-total_patients = len(st.session_state.patients)
-critical_count = sum(1 for p in st.session_state.patients if p['risk'] == 'CRITICAL')
-high_count = sum(1 for p in st.session_state.patients if p['risk'] == 'HIGH')
-low_count = sum(1 for p in st.session_state.patients if p['risk'] == 'ROUTINE')
+total_patients = len(sorted_patients)
+critical_count = sum(1 for p in sorted_patients if p.get('risk') == 'CRITICAL')
+high_count = sum(1 for p in sorted_patients if p.get('risk') == 'HIGH')
+low_count = sum(1 for p in sorted_patients if p.get('risk') == 'ROUTINE')
 
 col1, col2, col3, col4 = st.columns(4)
 with col1: st.markdown(f'<div class="metric-card"><h4>PATIENTS TODAY</h4><div><h2 style="color:white; display:inline;">{total_patients}</h2><span class="badge-green">+12%</span></div></div>', unsafe_allow_html=True)
@@ -276,7 +291,7 @@ st.write("---")
 left_col, right_col = st.columns([1.8, 1])
 
 with left_col:
-    st.markdown('#### Patient Status Feed &nbsp;&nbsp;<span style="color: #3b82f6; font-size: 12px; font-weight: normal;">● Real-time stream</span>', unsafe_allow_html=True)
+    st.markdown('#### Patient Status Feed &nbsp;&nbsp;<span style="color: #3b82f6; font-size: 12px; font-weight: normal;">● Prioritized by Severity</span>', unsafe_allow_html=True)
     html_code = """
     <!DOCTYPE html>
     <html>
@@ -308,10 +323,14 @@ with left_col:
     <body>
     <div class="space-y-4">
     """
-    for p in st.session_state.patients:
-        if p['risk'] == 'CRITICAL':
+    for p in sorted_patients:
+        risk = p.get('risk', 'ROUTINE')
+        room = p.get('room', 'ICU-101')
+        bed = p.get('bed', 'B-01')
+        
+        if risk == 'CRITICAL':
             border_color, tag_bg, text_color, glow = "border-l-red-500", "bg-red-500 text-white animate-pulse", "text-red-400", "shadow-lg shadow-red-900/20"
-        elif p['risk'] == 'HIGH':
+        elif risk == 'HIGH':
             border_color, tag_bg, text_color, glow = "border-l-amber-500", "bg-amber-500 text-black", "text-amber-400", "shadow-lg shadow-amber-900/20"
         else:
             border_color, tag_bg, text_color, glow = "border-l-emerald-500", "bg-emerald-500 text-black", "text-emerald-400", ""
@@ -320,22 +339,23 @@ with left_col:
         <div class="glass-panel rounded-2xl p-6 border-l-4 {border_color} {glow} relative overflow-hidden">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center space-x-3">
-                    <span class="px-3 py-1 rounded-lg text-xs font-bold uppercase {tag_bg}">{p['risk']}</span>
-                    <h3 class="text-lg font-bold font-[JetBrains Mono] tracking-wide text-white">Patient {p['id']}</h3>
+                    <span class="px-3 py-1 rounded-lg text-xs font-bold uppercase {tag_bg}">{risk}</span>
+                    <h3 class="text-lg font-bold font-[JetBrains Mono] tracking-wide text-white">Patient {p.get('id', 'N/A')}</h3>
+                    <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700">🚪 {room} | 🛌 {bed}</span>
                 </div>
                 <div class="flex items-center space-x-2">
                     <span class="text-xs text-slate-400 uppercase">AI Score</span>
-                    <span class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 {text_color} font-[JetBrains Mono] font-bold flex items-center justify-center text-sm">{p['score']}</span>
+                    <span class="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 {text_color} font-[JetBrains Mono] font-bold flex items-center justify-center text-sm">{p.get('score', '0')}</span>
                 </div>
             </div>
             <div class="grid grid-cols-5 gap-2 py-3 my-2 border-y border-slate-800/80">
-                <div><p class="text-xs text-slate-400 mb-1"><span class="animate-heartbeat text-red-500">❤️</span> HR</p><p class="text-lg font-[JetBrains Mono] font-bold {text_color}">{p['hr']}</p></div>
-                <div><p class="text-xs text-slate-400 mb-1">🫁 RR</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p['rr']}</p></div>
-                <div><p class="text-xs text-slate-400 mb-1"><span class="animate-breathing text-blue-400">🩸</span> SPO2</p><p class="text-lg font-[JetBrains Mono] font-bold {text_color}">{p['spo2']}</p></div>
-                <div><p class="text-xs text-slate-400 mb-1">🩺 BP</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p['bp']}</p></div>
-                <div><p class="text-xs text-slate-400 mb-1">🌡️ TEMP</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p['temp']}</p></div>
+                <div><p class="text-xs text-slate-400 mb-1"><span class="animate-heartbeat text-red-500">❤️</span> HR</p><p class="text-lg font-[JetBrains Mono] font-bold {text_color}">{p.get('hr', 'N/A')}</p></div>
+                <div><p class="text-xs text-slate-400 mb-1">🫁 RR</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p.get('rr', 'N/A')}</p></div>
+                <div><p class="text-xs text-slate-400 mb-1"><span class="animate-breathing text-blue-400">🩸</span> SPO2</p><p class="text-lg font-[JetBrains Mono] font-bold {text_color}">{p.get('spo2', 'N/A')}</p></div>
+                <div><p class="text-xs text-slate-400 mb-1">🩺 BP</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p.get('bp', 'N/A')}</p></div>
+                <div><p class="text-xs text-slate-400 mb-1">🌡️ TEMP</p><p class="text-lg font-[JetBrains Mono] font-bold text-white">{p.get('temp', 'N/A')}</p></div>
             </div>
-            <div class="mt-3 text-xs {text_color} bg-slate-900/50 p-2 rounded-lg border border-slate-800/50"><strong>AI Note:</strong> {p['note']}</div>
+            <div class="mt-3 text-xs {text_color} bg-slate-900/50 p-2 rounded-lg border border-slate-800/50"><strong>AI Note:</strong> {p.get('note', '')}</div>
         </div>
         """
     html_code += "</div></body></html>"
@@ -345,15 +365,16 @@ with right_col:
     st.markdown("#### 🧬 Patient Neural Grid")
     
     grid_html = '<div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 20px;">'
-    for p in st.session_state.patients:
-        if p['risk'] == 'CRITICAL':
+    for p in sorted_patients:
+        risk = p.get('risk', 'ROUTINE')
+        if risk == 'CRITICAL':
             color, shadow, anim = "#ef4444", "rgba(239, 68, 68, 0.6)", "animation: pulse 1.5s infinite;"
-        elif p['risk'] == 'HIGH':
+        elif risk == 'HIGH':
             color, shadow, anim = "#f59e0b", "rgba(245, 158, 11, 0.4)", ""
         else:
             color, shadow, anim = "#10b981", "rgba(16, 185, 129, 0.2)", ""
             
-        grid_html += f'<div title="Patient {p["id"]}" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
+        grid_html += f'<div title="Patient {p.get("id")} ({p.get("room", "")}-{p.get("bed", "")}) " style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
     
     grid_html += """
         <style>
@@ -390,8 +411,3 @@ with right_col:
             
             <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Cardiology</p>
             <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div></div>
-            
-            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Neurology</p>
-            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px;"><div style="background-color: #10b981; width: 40%; height: 100%; border-radius: 10px;"></div></div>
-        </div>
-    """, unsafe_allow_html=True)
