@@ -5,7 +5,7 @@ import numpy as np
 import joblib
 import random
 import os
-import plotly.express as px
+import plotly.graph_objects as go
 
 # --- 1. Page Configuration & Advanced CSS Injection ---
 st.set_page_config(page_title="TriageNet - ICU Command Center", layout="wide", initial_sidebar_state="expanded")
@@ -457,50 +457,71 @@ with right_col:
     
     st.markdown(grid_html, unsafe_allow_html=True)
 
-    # --- Plotly Bed Occupancy Chart Color-Coded by Patient Risk ---
+    # --- Interactive Plotly Bed Occupancy Chart ---
     st.markdown("#### 🏥 Room Bed Occupancy")
 
-    bed_details = []
-    for room_idx in range(1, 5):
-        room_name = f"ICU {room_idx}"
-        for bed_idx in range(1, 6):
-            bed_name = f"Bed {bed_idx}"
+    color_map = {
+        "CRITICAL": "#ef4444",  # Red
+        "HIGH": "#f59e0b",      # Yellow / Amber
+        "ROUTINE": "#3b82f6",   # Blue
+        "Available": "#10b981"  # Green
+    }
+
+    fig = go.Figure()
+
+    # Loop through each of the 5 bed positions (Bed 1 to Bed 5)
+    for bed_idx in range(1, 6):
+        bed_name = f"Bed {bed_idx}"
+        
+        x_rooms = []
+        y_vals = []
+        colors = []
+        hover_texts = []
+
+        for room_idx in range(1, 5):
+            room_name = f"ICU {room_idx}"
             matched_patient = next(
                 (p for p in sorted_patients if p.get('room') == room_name and p.get('bed') == bed_name), 
                 None
             )
+            
+            x_rooms.append(room_name)
+            y_vals.append(1)  # Height unit of 1 per bed slot
+            
             if matched_patient:
-                patient_risk = matched_patient.get('risk', 'ROUTINE')
-                bed_details.append({
-                    "ICU Room": room_name,
-                    "Bed No": bed_name,
-                    "Status": patient_risk,  # Using exact risk name for color mapping
-                    "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>ID: #{matched_patient.get('id')}<br>Risk: {patient_risk}"
-                })
+                risk = matched_patient.get('risk', 'ROUTINE')
+                p_id = matched_patient.get('id', 'N/A')
+                colors.append(color_map.get(risk, "#3b82f6"))
+                hover_texts.append(
+                    f"<b>{room_name}</b> - <b>{bed_name}</b><br>"
+                    f"Patient ID: #{p_id}<br>"
+                    f"Condition: <b>{risk}</b>"
+                )
             else:
-                bed_details.append({
-                    "ICU Room": room_name,
-                    "Bed No": bed_name,
-                    "Status": "Available",
-                    "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>Status: Available"
-                })
+                colors.append(color_map["Available"])
+                hover_texts.append(
+                    f"<b>{room_name}</b> - <b>{bed_name}</b><br>"
+                    f"Status: <b>Available</b>"
+                )
 
-    df_beds = pd.DataFrame(bed_details)
+        # Add a trace for this bed stack level
+        fig.add_trace(go.Bar(
+            x=x_rooms,
+            y=y_vals,
+            marker_color=colors,
+            hoverinfo="text",
+            hovertext=hover_texts,
+            showlegend=False
+        ))
 
-    fig = px.bar(
-        df_beds, 
-        x="ICU Room", 
-        y=[1]*len(df_beds), 
-        color="Status",
-        hover_name="Hover Text",
-        color_discrete_map={
-            "CRITICAL": "#ef4444",  # Red
-            "HIGH": "#f59e0b",      # Amber/Orange
-            "ROUTINE": "#3b82f6",   # Blue
-            "Available": "#10b981"  # Green
-        },
-        labels={"y": "Total Beds"}
-    )
+    # Add custom legend keys for conditions
+    for status, color in color_map.items():
+        fig.add_trace(go.Bar(
+            x=[None], y=[None],
+            marker_color=color,
+            name=status,
+            showlegend=True
+        ))
 
     fig.update_layout(
         barmode="stack",
@@ -509,12 +530,11 @@ with right_col:
         font=dict(color="#94a3b8"),
         margin=dict(l=10, r=10, t=10, b=10),
         height=260,
-        showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
     fig.update_xaxes(showgrid=False, color="#94a3b8")
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.05)", range=[0, 5], dtick=1)
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.05)", range=[0, 5], dtick=1, title="Total Beds")
 
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
