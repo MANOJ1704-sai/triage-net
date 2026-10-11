@@ -185,13 +185,12 @@ st.sidebar.write("---")
 next_auto_id = get_next_sequential_id(st.session_state.patients)
 patient_id = st.sidebar.text_input("Patient ID Number", next_auto_id)
 
-# Dynamic Default Room/Bed Generator
-next_bed_num = len(st.session_state.patients) + 1
+# Select Dropdowns for ICU Room (1-4) and Bed No (1-5)
 col_room, col_bed = st.sidebar.columns(2)
 with col_room:
-    room_no = st.text_input("Room No.", f"ICU-{(next_bed_num // 4) + 101}")
+    room_no = st.selectbox("Select ICU Room", ["ICU 1", "ICU 2", "ICU 3", "ICU 4"])
 with col_bed:
-    bed_no = st.text_input("Bed No.", f"Bed-{(next_bed_num % 4) + 1:02d}")
+    bed_no = st.selectbox("Select Bed No.", ["Bed 1", "Bed 2", "Bed 3", "Bed 4", "Bed 5"])
 
 if assessment_type == "Track A: Heart Disease":
     age = st.sidebar.slider("Age", 20, 100, 50)
@@ -274,7 +273,7 @@ sorted_patients = sorted(
     key=lambda x: (risk_priority.get(x.get('risk', 'ROUTINE'), 2), -int(x.get('score', 0)))
 )
 
-# Dynamic Bed Occupancy Calculation (Targeting 20 Beds Total)
+# Dynamic Bed Occupancy Calculation (4 ICUs x 5 Beds = 20 Total Beds)
 TOTAL_ICU_BEDS = 20
 occupied_beds = len(sorted_patients)
 occupancy_rate = min(int((occupied_beds / TOTAL_ICU_BEDS) * 100), 100)
@@ -315,7 +314,7 @@ with left_col:
     # Discharge / Delete Patient Control Header
     with st.expander("🗑️ Patient Discharge / Management Panel"):
         if sorted_patients:
-            patient_options = [f"ID: {p.get('id')} ({p.get('risk', 'ROUTINE')} - {p.get('room', '')}/{p.get('bed', '')})" for p in sorted_patients]
+            patient_options = [f"ID: {p.get('id')} ({p.get('risk', 'ROUTINE')} - {p.get('room', 'ICU 1')}/{p.get('bed', 'Bed 1')})" for p in sorted_patients]
             selected_to_delete = st.selectbox("Select Patient to Discharge:", patient_options)
             if st.button("Discharge Selected Patient"):
                 selected_id = selected_to_delete.split(" ")[1]
@@ -359,8 +358,8 @@ with left_col:
     """
     for idx, p in enumerate(sorted_patients):
         risk = p.get('risk', 'ROUTINE')
-        room = p.get('room', f"ICU-{(idx // 4) + 101}")
-        bed = p.get('bed', f"Bed-{(idx % 4) + 1:02d}")
+        room = p.get('room', f"ICU {(idx // 5) + 1}")
+        bed = p.get('bed', f"Bed {(idx % 5) + 1}")
         
         if risk == 'CRITICAL':
             border_color, tag_bg, text_color, glow = "border-l-red-500", "bg-red-500 text-white animate-pulse", "text-red-400", "shadow-lg shadow-red-900/20"
@@ -402,8 +401,8 @@ with right_col:
     grid_html = '<div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 20px;">'
     for idx, p in enumerate(sorted_patients):
         risk = p.get('risk', 'ROUTINE')
-        room = p.get('room', f"ICU-{(idx // 4) + 101}")
-        bed = p.get('bed', f"Bed-{(idx % 4) + 1:02d}")
+        room = p.get('room', f"ICU {(idx // 5) + 1}")
+        bed = p.get('bed', f"Bed {(idx % 5) + 1}")
         
         if risk == 'CRITICAL':
             color, shadow, anim = "#ef4444", "rgba(239, 68, 68, 0.6)", "animation: pulse 1.5s infinite;"
@@ -412,7 +411,7 @@ with right_col:
         else:
             color, shadow, anim = "#10b981", "rgba(16, 185, 129, 0.2)", ""
             
-        grid_html += f'<div title="Patient {p.get("id")} ({room} - {bed})" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
+        grid_html += f'<div title="Patient #{p.get("id")} ({room} - {bed})" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
     
     grid_html += f"""
         <style>
