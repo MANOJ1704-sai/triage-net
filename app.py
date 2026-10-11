@@ -457,7 +457,7 @@ with right_col:
     
     st.markdown(grid_html, unsafe_allow_html=True)
 
-    # --- Plotly Interactive Bed Occupancy Chart ---
+    # --- Plotly Bed Occupancy Chart Color-Coded by Patient Risk ---
     st.markdown("#### 🏥 Room Bed Occupancy")
 
     bed_details = []
@@ -470,19 +470,18 @@ with right_col:
                 None
             )
             if matched_patient:
+                patient_risk = matched_patient.get('risk', 'ROUTINE')
                 bed_details.append({
                     "ICU Room": room_name,
                     "Bed No": bed_name,
-                    "Status": "Occupied",
-                    "Patient ID": f"Patient #{matched_patient.get('id')}",
-                    "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>ID: #{matched_patient.get('id')}<br>Risk: {matched_patient.get('risk')}"
+                    "Status": patient_risk,  # Using exact risk name for color mapping
+                    "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>ID: #{matched_patient.get('id')}<br>Risk: {patient_risk}"
                 })
             else:
                 bed_details.append({
                     "ICU Room": room_name,
                     "Bed No": bed_name,
                     "Status": "Available",
-                    "Patient ID": "None",
                     "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>Status: Available"
                 })
 
@@ -494,7 +493,12 @@ with right_col:
         y=[1]*len(df_beds), 
         color="Status",
         hover_name="Hover Text",
-        color_discrete_map={"Occupied": "#ef4444", "Available": "#10b981"},
+        color_discrete_map={
+            "CRITICAL": "#ef4444",  # Red
+            "HIGH": "#f59e0b",      # Amber/Orange
+            "ROUTINE": "#3b82f6",   # Blue
+            "Available": "#10b981"  # Green
+        },
         labels={"y": "Total Beds"}
     )
 
