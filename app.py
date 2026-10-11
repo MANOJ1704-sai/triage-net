@@ -195,7 +195,7 @@ def get_next_sequential_id(patients_list):
         return str(max(existing_ids) + 1)
     return str(BASE_START_ID)
 
-# Reload and clean database from CSV to keep state persistent across refreshes
+# Reload and clean database from CSV
 st.session_state.patients = clean_and_persist_patients(load_database())
 
 # --- 3. Load ML Models ---
@@ -238,7 +238,6 @@ if assessment_type == "Track A: Heart Disease":
     age = st.sidebar.slider("Age", 20, 100, 50)
     sex = st.sidebar.selectbox("Sex (1=M, 0=F)", [1, 0])
     
-    # Replaced numerical selection with medical term dropdowns
     cp_label_map = {
         "typical angina": 1,
         "atypical angina": 2,
@@ -258,7 +257,6 @@ if assessment_type == "Track A: Heart Disease":
     slope = st.sidebar.selectbox("ST Slope (1-3)", [1, 2, 3])
     ca = st.sidebar.slider("Major Vessels (0-3)", 0, 3, 0)
     
-    # Replaced numerical selection with medical term dropdowns
     thal_label_map = {
         "normal": 3,
         "fixed defect": 6,
@@ -465,6 +463,26 @@ with left_col:
         """
     html_code += "</div></body></html>"
     components.html(html_code, height=600, scrolling=True)
+
+    # --- Project Legends & Team Details Panel in Lower Left ---
+    with st.expander("🏷️ Project Legends & Team Details", expanded=False):
+        st.markdown("""
+        <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 18px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); color: #cbd5e1; font-family: sans-serif;">
+            <h4 style="color: #3b82f6; margin-top: 0; margin-bottom: 10px;">⚡ TriageNet - Project Credits</h4>
+            <p style="font-size: 13px; margin-bottom: 8px;"><strong>Team Members & Roles:</strong></p>
+            <ul style="font-size: 12px; padding-left: 20px; margin-bottom: 12px; color: #94a3b8; line-height: 1.6;">
+                <li><strong>Raghunandhan P:</strong> Team Leader, Backend Developer</li>
+                <li><strong>P Sai Manoj:</strong> Frontend, UI & UX Designer</li>
+                <li><strong>Yeshas G:</strong> Researcher, Senior Pitch</li>
+                <li><strong>Sanjeev Jagadesan:</strong> Senior Editor, Debugger</li>
+            </ul>
+            <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
+            <h5 style="color: #10b981; margin-top: 5px; margin-bottom: 8px;">🎯 Project Mission & AI Architecture</h5>
+            <p style="font-size: 12px; line-height: 1.5; color: #94a3b8;">
+                <strong>TriageNet</strong> is an intelligent clinical triage platform designed to assess critical patient vitals in real time, predict diagnostic severity using multi-modal Machine Learning models (Heart Disease, Diabetes, & Text NLP), and auto-assign specialized medical staff to maximize ICU bed allocation efficiency.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 with right_col:
     st.markdown("#### 🧬 Patient Neural Grid")
