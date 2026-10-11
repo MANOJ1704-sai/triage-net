@@ -440,15 +440,22 @@ with right_col:
     """, unsafe_allow_html=True)
     
     st.markdown("#### 📊 Dept Workload")
-    st.markdown("""
-        <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07);">
-            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Emergency</p>
-            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #ef4444; width: 85%; height: 100%; border-radius: 10px;"></div></div>
-            
-            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Cardiology</p>
-            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div></div>
-            
-            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Neurology</p>
-            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px;"><div style="background-color: #10b981; width: 40%; height: 100%; border-radius: 10px;"></div></div>
+
+    components.html("""
+        <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); font-family: sans-serif;">
+        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Emergency</p>
+        <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;">
+            <div style="background-color: #ef4444; width: 85%; height: 100%; border-radius: 10px;"></div>
         </div>
-    """, unsafe_allow_html=True)
+        
+        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Cardiology</p>
+        <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;">
+            <div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div>
+        </div>
+        
+        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Neurology</p>
+        <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px;">
+            <div style="background-color: #10b981; width: 40%; height: 100%; border-radius: 10px;"></div>
+        </div>
+    </div>
+""", height=180)
