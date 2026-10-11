@@ -7,7 +7,7 @@ import random
 import os
 
 # --- 1. Page Configuration & Advanced CSS Injection ---
-st.set_page_config(page_title="Patient Deterioration Monitor", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="TriageNet - ICU Command Center", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -23,9 +23,34 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] {
-        background-color: rgba(17, 24, 39, 0.95) !important;
-        backdrop-filter: blur(10px) !important;
-        border-right: 1px solid #1f2937 !important;
+        background-color: rgba(11, 15, 25, 0.95) !important;
+        backdrop-filter: blur(12px) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+    }
+
+    /* Radio Button Custom Styling to Match UI Design */
+    section[data-testid="stSidebar"] [role="radiogroup"] {
+        gap: 8px !important;
+    }
+
+    section[data-testid="stSidebar"] [role="radiogroup"] > label {
+        background-color: rgba(19, 28, 46, 0.7) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 10px 14px !important;
+        border-radius: 12px !important;
+        margin-bottom: 4px !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    section[data-testid="stSidebar"] [role="radiogroup"] > label:hover {
+        border-color: rgba(239, 68, 68, 0.5) !important;
+        background-color: rgba(239, 68, 68, 0.08) !important;
+    }
+
+    section[data-testid="stSidebar"] [role="radiogroup"] input[type="radio"]:checked + div {
+        background-color: #ef4444 !important;
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.8) !important;
     }
     
     .stTextInput>div>div>input, .stSelectbox>div>div>div {
@@ -75,7 +100,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Interactive Cursor Injection (Green Concentric) ---
+# --- Interactive Cursor Injection (Green Concentric Halo) ---
 components.html("""
 <script>
     const doc = window.parent.document;
@@ -106,7 +131,7 @@ components.html("""
 </script>
 """, height=0, width=0)
 
-# --- 2. Permanent Database Functions ---
+# --- 2. Database Functions ---
 DB_FILE = 'patients_db.csv'
 
 def load_database():
@@ -115,14 +140,17 @@ def load_database():
     return []
 
 def save_database(patients_list):
-    pd.DataFrame(patients_list).to_csv(DB_FILE, index=False)
+    try:
+        pd.DataFrame(patients_list).to_csv(DB_FILE, index=False)
+    except Exception:
+        pass
 
 if 'patients' not in st.session_state:
     st.session_state.patients = load_database()
 if 'new_patient_id' not in st.session_state:
     st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
 
-# --- 3. Load All AI Models ---
+# --- 3. Load ML Models ---
 @st.cache_resource
 def load_models():
     models = {'heart': None, 'diabetes': None, 'text': None}
@@ -136,9 +164,10 @@ def load_models():
 
 models = load_models()
 
-# --- 4. Sidebar: Add Patients & Run AI ---
-st.sidebar.title("🩺 AI Assessment Panel")
-assessment_type = st.sidebar.radio("Select Diagnostic Tool:", ["Track A: Heart Disease", "Track A: Diabetes", "Track C: Text Triage"])
+# --- 4. Sidebar Assessment Panel ---
+st.sidebar.markdown('## 🩺 AI Assessment Panel')
+st.sidebar.caption("Select Diagnostic Tool:")
+assessment_type = st.sidebar.radio("", ["Track A: Heart Disease", "Track B: Diabetes", "Track C: Text Triage"], label_visibility="collapsed")
 st.sidebar.write("---")
 patient_id = st.sidebar.text_input("Patient ID Number", st.session_state.new_patient_id)
 
@@ -174,7 +203,7 @@ if assessment_type == "Track A: Heart Disease":
             st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
-elif assessment_type == "Track A: Diabetes":
+elif assessment_type == "Track B: Diabetes":
     preg = st.sidebar.slider("Pregnancies", 0, 20, 1)
     gluc = st.sidebar.slider("Glucose", 0, 250, 120)
     bp = st.sidebar.slider("Blood Pressure", 0, 150, 70)
@@ -216,7 +245,7 @@ elif assessment_type == "Track C: Text Triage":
             st.session_state.new_patient_id = str(random.randint(30000000, 39999999))
             st.rerun()
 
-# --- 5. Main Dashboard View ---
+# --- 5. Dashboard View ---
 st.markdown("<h2 style='margin-bottom: 0px;'>❤️ ICU Command Center</h2>", unsafe_allow_html=True)
 st.markdown('<p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">Powered by Neural Triage v3.4 • <span style="color: #3b82f6;">●</span> Real-time telemetry</p>', unsafe_allow_html=True)
 
@@ -260,7 +289,6 @@ with left_col:
             ::-webkit-scrollbar { width: 6px; }
             ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
             
-            /* Live Icon Animations */
             @keyframes heartbeat {
                 0%, 100% { transform: scale(1); }
                 15% { transform: scale(1.25); }
@@ -268,19 +296,13 @@ with left_col:
                 45% { transform: scale(1.25); }
                 60% { transform: scale(1); }
             }
-            .animate-heartbeat { 
-                display: inline-block; 
-                animation: heartbeat 1.2s infinite; 
-            }
+            .animate-heartbeat { display: inline-block; animation: heartbeat 1.2s infinite; }
             
             @keyframes breathing {
                 0%, 100% { transform: scale(1); opacity: 0.7; }
                 50% { transform: scale(1.15); opacity: 1; }
             }
-            .animate-breathing { 
-                display: inline-block; 
-                animation: breathing 3s infinite ease-in-out; 
-            }
+            .animate-breathing { display: inline-block; animation: breathing 3s infinite ease-in-out; }
         </style>
     </head>
     <body>
