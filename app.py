@@ -5,6 +5,7 @@ import numpy as np
 import joblib
 import random
 import os
+import plotly.express as px
 
 # --- 1. Page Configuration & Advanced CSS Injection ---
 st.set_page_config(page_title="TriageNet - ICU Command Center", layout="wide", initial_sidebar_state="expanded")
@@ -214,12 +215,11 @@ with col_room:
 with col_bed:
     bed_no = st.selectbox("Select Bed No.", ["Bed 1", "Bed 2", "Bed 3", "Bed 4", "Bed 5"])
 
-# Check if selected ICU room & Bed combination is already occupied
 occupied_beds_set = {(p.get('room'), p.get('bed')) for p in st.session_state.patients}
 is_bed_taken = (room_no, bed_no) in occupied_beds_set
 
 if is_bed_taken:
-    st.sidebar.error(f"⚠️ {room_no} - {bed_no} is ALREADY OCCUPIED! Please select a different bed.")
+    st.sidebar.error(f"⚠️ {room_no} - {bed_no} is ALREADY OCCUPIED!")
 
 if assessment_type == "Track A: Heart Disease":
     age = st.sidebar.slider("Age", 20, 100, 50)
@@ -302,16 +302,9 @@ sorted_patients = sorted(
     key=lambda x: (risk_priority.get(x.get('risk', 'ROUTINE'), 2), -int(x.get('score', 0)))
 )
 
-# Dynamic Bed Occupancy Calculation across 4 ICU Rooms (5 Beds Each = 20 Beds Total)
 TOTAL_ICU_BEDS = 20
 occupied_beds = len(sorted_patients)
 occupancy_rate = min(int((occupied_beds / TOTAL_ICU_BEDS) * 100), 100)
-
-icu_room_counts = {f"ICU {i}": 0 for i in range(1, 5)}
-for p in sorted_patients:
-    r = p.get('room', 'ICU 1')
-    if r in icu_room_counts:
-        icu_room_counts[r] += 1
 
 # --- 5. Dashboard View ---
 st.markdown("<h2 style='margin-bottom: 0px;'>❤️ ICU Command Center</h2>", unsafe_allow_html=True)
@@ -464,16 +457,64 @@ with right_col:
     
     st.markdown(grid_html, unsafe_allow_html=True)
 
-    # 🏥 Bed Occupancy breakdown per ICU Room (ICU 1 - ICU 4)
+    # --- Plotly Interactive Bed Occupancy Chart ---
     st.markdown("#### 🏥 Room Bed Occupancy")
-    
-    room_occupancy_df = pd.DataFrame({
-        "Beds Occupied": [icu_room_counts[f"ICU {i}"] for i in range(1, 5)],
-        "Available Beds": [5 - icu_room_counts[f"ICU {i}"] for i in range(1, 5)]
-    }, index=["ICU 1", "ICU 2", "ICU 3", "ICU 4"])
-    
-    st.bar_chart(room_occupancy_df, color=["#ef4444", "#10b981"], height=220)
 
+    bed_details = []
+    for room_idx in range(1, 5):
+        room_name = f"ICU {room_idx}"
+        for bed_idx in range(1, 6):
+            bed_name = f"Bed {bed_idx}"
+            matched_patient = next(
+                (p for p in sorted_patients if p.get('room') == room_name and p.get('bed') == bed_name), 
+                None
+            )
+            if matched_patient:
+                bed_details.append({
+                    "ICU Room": room_name,
+                    "Bed No": bed_name,
+                    "Status": "Occupied",
+                    "Patient ID": f"Patient #{matched_patient.get('id')}",
+                    "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>ID: #{matched_patient.get('id')}<br>Risk: {matched_patient.get('risk')}"
+                })
+            else:
+                bed_details.append({
+                    "ICU Room": room_name,
+                    "Bed No": bed_name,
+                    "Status": "Available",
+                    "Patient ID": "None",
+                    "Hover Text": f"<b>{room_name}</b> - <b>{bed_name}</b><br>Status: Available"
+                })
+
+    df_beds = pd.DataFrame(bed_details)
+
+    fig = px.bar(
+        df_beds, 
+        x="ICU Room", 
+        y=[1]*len(df_beds), 
+        color="Status",
+        hover_name="Hover Text",
+        color_discrete_map={"Occupied": "#ef4444", "Available": "#10b981"},
+        labels={"y": "Total Beds"}
+    )
+
+    fig.update_layout(
+        barmode="stack",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94a3b8"),
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=260,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    fig.update_xaxes(showgrid=False, color="#94a3b8")
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.05)", range=[0, 5], dtick=1)
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+    # --- Department Workload HTML Section ---
     st.markdown("#### 📊 Dept Workload")
     components.html("""
         <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); font-family: sans-serif;">
