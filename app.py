@@ -28,6 +28,7 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
     }
 
+    /* Radio Button Custom Styling */
     section[data-testid="stSidebar"] [role="radiogroup"] {
         gap: 8px !important;
     }
@@ -171,11 +172,13 @@ st.sidebar.write("---")
 
 patient_id = st.sidebar.text_input("Patient ID Number", st.session_state.new_patient_id)
 
+# Dynamic Default Room/Bed Generator
+next_bed_num = len(st.session_state.patients) + 1
 col_room, col_bed = st.sidebar.columns(2)
 with col_room:
-    room_no = st.text_input("Room No.", "ICU-101")
+    room_no = st.text_input("Room No.", f"ICU-{(next_bed_num // 4) + 101}")
 with col_bed:
-    bed_no = st.text_input("Bed No.", "B-04")
+    bed_no = st.text_input("Bed No.", f"Bed-{(next_bed_num % 4) + 1:02d}")
 
 if assessment_type == "Track A: Heart Disease":
     age = st.sidebar.slider("Age", 20, 100, 50)
@@ -258,6 +261,11 @@ sorted_patients = sorted(
     key=lambda x: (risk_priority.get(x.get('risk', 'ROUTINE'), 2), -int(x.get('score', 0)))
 )
 
+# Dynamic Bed Occupancy Calculation (Targeting 20 Beds Total)
+TOTAL_ICU_BEDS = 20
+occupied_beds = len(sorted_patients)
+occupancy_rate = min(int((occupied_beds / TOTAL_ICU_BEDS) * 100), 100)
+
 # --- 5. Dashboard View ---
 st.markdown("<h2 style='margin-bottom: 0px;'>❤️ ICU Command Center</h2>", unsafe_allow_html=True)
 st.markdown('<p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">Powered by Neural Triage v3.4 • <span style="color: #3b82f6;">●</span> Real-time telemetry</p>', unsafe_allow_html=True)
@@ -271,7 +279,7 @@ col1, col2, col3, col4 = st.columns(4)
 with col1: st.markdown(f'<div class="metric-card"><h4>PATIENTS TODAY</h4><div><h2 style="color:white; display:inline;">{total_patients}</h2><span class="badge-green">+12%</span></div></div>', unsafe_allow_html=True)
 with col2: st.markdown(f'<div class="metric-card"><h4>CRITICAL RISK</h4><div><h2 style="color:#ef4444; display:inline;">{critical_count}</h2><span class="badge-red">-3%</span></div></div>', unsafe_allow_html=True)
 with col3: st.markdown(f'<div class="metric-card"><h4>HIGH RISK</h4><div><h2 style="color:#f59e0b; display:inline;">{high_count}</h2></div></div>', unsafe_allow_html=True)
-with col4: st.markdown(f'<div class="metric-card"><h4>BED OCCUPANCY</h4><div><h2 style="color:white; display:inline;">78%</h2><span class="badge-green">+5%</span></div></div>', unsafe_allow_html=True)
+with col4: st.markdown(f'<div class="metric-card"><h4>BED OCCUPANCY</h4><div><h2 style="color:white; display:inline;">{occupancy_rate}%</h2><span class="badge-green">{occupied_beds}/{TOTAL_ICU_BEDS} BEDS</span></div></div>', unsafe_allow_html=True)
 
 st.write("---")
 
@@ -321,10 +329,10 @@ with left_col:
     <body>
     <div class="space-y-4">
     """
-    for p in sorted_patients:
+    for idx, p in enumerate(sorted_patients):
         risk = p.get('risk', 'ROUTINE')
-        room = p.get('room', 'ICU-101')
-        bed = p.get('bed', 'B-01')
+        room = p.get('room', f"ICU-{(idx // 4) + 101}")
+        bed = p.get('bed', f"Bed-{(idx % 4) + 1:02d}")
         
         if risk == 'CRITICAL':
             border_color, tag_bg, text_color, glow = "border-l-red-500", "bg-red-500 text-white animate-pulse", "text-red-400", "shadow-lg shadow-red-900/20"
@@ -339,7 +347,8 @@ with left_col:
                 <div class="flex items-center space-x-3">
                     <span class="px-3 py-1 rounded-lg text-xs font-bold uppercase {tag_bg}">{risk}</span>
                     <h3 class="text-lg font-bold font-[JetBrains Mono] tracking-wide text-white">Patient {p.get('id', 'N/A')}</h3>
-                    <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700">🚪 {room} | 🛌 {bed}</span>
+                    <span class="text-xs bg-slate-800/90 text-blue-400 px-2.5 py-1 rounded-md border border-slate-700 font-medium">🚪 {room}</span>
+                    <span class="text-xs bg-slate-800/90 text-emerald-400 px-2.5 py-1 rounded-md border border-slate-700 font-medium">🛌 {bed}</span>
                 </div>
                 <div class="flex items-center space-x-2">
                     <span class="text-xs text-slate-400 uppercase">AI Score</span>
@@ -363,8 +372,11 @@ with right_col:
     st.markdown("#### 🧬 Patient Neural Grid")
     
     grid_html = '<div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 20px;">'
-    for p in sorted_patients:
+    for idx, p in enumerate(sorted_patients):
         risk = p.get('risk', 'ROUTINE')
+        room = p.get('room', f"ICU-{(idx // 4) + 101}")
+        bed = p.get('bed', f"Bed-{(idx % 4) + 1:02d}")
+        
         if risk == 'CRITICAL':
             color, shadow, anim = "#ef4444", "rgba(239, 68, 68, 0.6)", "animation: pulse 1.5s infinite;"
         elif risk == 'HIGH':
@@ -372,7 +384,7 @@ with right_col:
         else:
             color, shadow, anim = "#10b981", "rgba(16, 185, 129, 0.2)", ""
             
-        grid_html += f'<div title="Patient {p.get("id")} ({p.get("room", "")}-{p.get("bed", "")})" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
+        grid_html += f'<div title="Patient {p.get("id")} ({room} - {bed})" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
     
     grid_html += f"""
         <style>
@@ -391,13 +403,14 @@ with right_col:
     
     st.markdown(grid_html, unsafe_allow_html=True)
 
-    st.markdown("#### 🏥 Bed Occupancy")
-    st.markdown("""
+    st.markdown("#### 🏥 Bed Occupancy Gauge")
+    st.markdown(f"""
         <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); text-align: center; margin-bottom: 20px;">
-            <div style="width: 120px; height: 120px; border-radius: 50%; border: 12px solid rgba(30, 41, 59, 0.8); border-top-color: #10b981; border-right-color: #10b981; border-bottom-color: #3b82f6; margin: 0 auto; display: flex; align-items: center; justify-content: center;">
-                <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; color: white;">78%</h2>
+            <div style="width: 130px; height: 130px; border-radius: 50%; border: 12px solid rgba(30, 41, 59, 0.8); border-top-color: #3b82f6; border-right-color: #10b981; border-bottom-color: #10b981; margin: 0 auto; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; color: white; font-size: 32px;">{occupancy_rate}%</h2>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: bold;">{occupied_beds} / {TOTAL_ICU_BEDS} BEDS</span>
             </div>
-            <p style="color: #94a3b8; font-size: 13px; margin-top: 15px;">Occupancy rate by ward</p>
+            <p style="color: #94a3b8; font-size: 13px; margin-top: 15px;">Real-time Ward Capacity</p>
         </div>
     """, unsafe_allow_html=True)
     
