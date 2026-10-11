@@ -133,6 +133,7 @@ components.html("""
 
 # --- 2. Database & Sequential ID Functions ---
 DB_FILE = 'patients_db.csv'
+BASE_START_ID = 2717270
 
 def load_database():
     if os.path.exists(DB_FILE):
@@ -145,22 +146,45 @@ def save_database(patients_list):
     except Exception:
         pass
 
+def clean_existing_patient_ids(patients_list):
+    """ Converts all old/random patient IDs in database to sequence 2717270+ """
+    updated = False
+    current_id = BASE_START_ID
+    for p in patients_list:
+        raw_id = str(p.get('id', '')).strip()
+        try:
+            val = int(raw_id)
+            if val < BASE_START_ID or val > 2719999 or len(raw_id) > 7:
+                p['id'] = str(current_id)
+                updated = True
+                current_id += 1
+            else:
+                if val >= current_id:
+                    current_id = val + 1
+        except ValueError:
+            p['id'] = str(current_id)
+            updated = True
+            current_id += 1
+    if updated:
+        save_database(patients_list)
+    return patients_list
+
 def get_next_sequential_id(patients_list):
-    start_id = 2700001
     existing_ids = []
     for p in patients_list:
         try:
             p_id = int(str(p.get('id', '')).strip())
-            if p_id >= 2700000:
+            if p_id >= BASE_START_ID:
                 existing_ids.append(p_id)
         except ValueError:
             pass
     if existing_ids:
         return str(max(existing_ids) + 1)
-    return str(start_id)
+    return str(BASE_START_ID)
 
 if 'patients' not in st.session_state:
-    st.session_state.patients = load_database()
+    loaded_patients = load_database()
+    st.session_state.patients = clean_existing_patient_ids(loaded_patients)
 
 # --- 3. Load ML Models ---
 @st.cache_resource
@@ -215,7 +239,7 @@ if assessment_type == "Track A: Heart Disease":
             risk_level = "CRITICAL" if pred == 1 and prob[1] > 0.8 else ("HIGH" if pred == 1 else "ROUTINE")
             
             st.session_state.patients.append({
-                "id": patient_id if patient_id.strip() else next_auto_id,
+                "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": str(thalach), "rr": str(random.randint(12, 25)), "spo2": str(random.randint(90, 99)), 
                 "bp": f"{trestbps}/80", "temp": "37.0", "note": f"Heart AI - Conf: {prob[1]*100:.1f}%"
@@ -242,7 +266,7 @@ elif assessment_type == "Track B: Diabetes":
             risk_level = "HIGH" if pred == 1 else "ROUTINE"
             
             st.session_state.patients.append({
-                "id": patient_id if patient_id.strip() else next_auto_id,
+                "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "75", "rr": "16", "spo2": "98", "bp": f"{bp}/60", "temp": "36.8", "note": f"Diabetes AI - Conf: {prob[1]*100:.1f}%"
             })
@@ -258,7 +282,7 @@ elif assessment_type == "Track C: Text Triage":
             risk_level = "CRITICAL" if pred == 1 else "ROUTINE"
             
             st.session_state.patients.append({
-                "id": patient_id if patient_id.strip() else next_auto_id,
+                "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "N/A", "rr": "N/A", "spo2": "N/A", "bp": "N/A", "temp": "N/A", "note": "NLP Text Triage Used"
             })
@@ -440,22 +464,21 @@ with right_col:
     """, unsafe_allow_html=True)
     
     st.markdown("#### 📊 Dept Workload")
-
     components.html("""
         <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); font-family: sans-serif;">
-        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Emergency</p>
-        <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;">
-            <div style="background-color: #ef4444; width: 85%; height: 100%; border-radius: 10px;"></div>
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Emergency</p>
+            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;">
+                <div style="background-color: #ef4444; width: 85%; height: 100%; border-radius: 10px;"></div>
+            </div>
+            
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Cardiology</p>
+            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;">
+                <div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div>
+            </div>
+            
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Neurology</p>
+            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px;">
+                <div style="background-color: #10b981; width: 40%; height: 100%; border-radius: 10px;"></div>
+            </div>
         </div>
-        
-        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Cardiology</p>
-        <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;">
-            <div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div>
-        </div>
-        
-        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px; margin-top: 0;">Neurology</p>
-        <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px;">
-            <div style="background-color: #10b981; width: 40%; height: 100%; border-radius: 10px;"></div>
-        </div>
-    </div>
-""", height=180)
+    """, height=180)
