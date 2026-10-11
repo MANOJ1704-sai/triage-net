@@ -134,25 +134,29 @@ components.html("""
 </script>
 """, height=0, width=0)
 
-# --- 2. Database & Sequential ID Functions ---
+# --- 2. Database & Persistent Storage Functions ---
 DB_FILE = 'patients_db.csv'
 BASE_START_ID = 2717270
 
 def load_database():
     if os.path.exists(DB_FILE):
-        return pd.read_csv(DB_FILE, dtype=str).to_dict('records')
+        try:
+            return pd.read_csv(DB_FILE, dtype=str).fillna("").to_dict('records')
+        except Exception:
+            return []
     return []
 
 def save_database(patients_list):
     try:
         pd.DataFrame(patients_list).to_csv(DB_FILE, index=False)
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Failed to save to database: {e}")
 
-def clean_existing_patient_ids(patients_list):
+def clean_and_persist_patients(patients_list):
     updated = False
     current_id = BASE_START_ID
     doctors = ["Dr. Rajesh Sharma (Cardiologist)", "Dr. Priya Nair (Endocrinologist)", "Dr. Vikram Mehta (Emergency)"]
+    
     for p in patients_list:
         raw_id = str(p.get('id', '')).strip()
         try:
@@ -173,8 +177,9 @@ def clean_existing_patient_ids(patients_list):
             p['doctor'] = random.choice(doctors)
             updated = True
             
-    if updated:
+    if updated or not os.path.exists(DB_FILE):
         save_database(patients_list)
+        
     return patients_list
 
 def get_next_sequential_id(patients_list):
@@ -190,9 +195,8 @@ def get_next_sequential_id(patients_list):
         return str(max(existing_ids) + 1)
     return str(BASE_START_ID)
 
-if 'patients' not in st.session_state:
-    loaded_patients = load_database()
-    st.session_state.patients = clean_existing_patient_ids(loaded_patients)
+# Always reload and clean database from CSV to keep session state in sync
+st.session_state.patients = clean_and_persist_patients(load_database())
 
 # --- 3. Load ML Models ---
 @st.cache_resource
@@ -253,13 +257,14 @@ if assessment_type == "Track A: Heart Disease":
             prob = models['heart'].predict_proba(input_data)[0]
             risk_level = "CRITICAL" if pred == 1 and prob[1] > 0.8 else ("HIGH" if pred == 1 else "ROUTINE")
             
-            st.session_state.patients.append({
+            new_patient = {
                 "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": str(thalach), "rr": str(random.randint(12, 25)), "spo2": str(random.randint(90, 99)), 
                 "bp": f"{trestbps}/80", "temp": "37.0", "note": f"Heart AI - Conf: {prob[1]*100:.1f}%",
                 "doctor": assigned_doc
-            })
+            }
+            st.session_state.patients.append(new_patient)
             save_database(st.session_state.patients)
             st.rerun()
 
@@ -282,12 +287,13 @@ elif assessment_type == "Track B: Diabetes":
             prob = models['diabetes'].predict_proba(input_data)[0]
             risk_level = "HIGH" if pred == 1 else "ROUTINE"
             
-            st.session_state.patients.append({
+            new_patient = {
                 "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "75", "rr": "16", "spo2": "98", "bp": f"{bp}/60", "temp": "36.8", "note": f"Diabetes AI - Conf: {prob[1]*100:.1f}%",
                 "doctor": assigned_doc
-            })
+            }
+            st.session_state.patients.append(new_patient)
             save_database(st.session_state.patients)
             st.rerun()
 
@@ -300,12 +306,13 @@ elif assessment_type == "Track C: Text Triage":
             prob = models['text'].predict_proba([clinical_text])[0]
             risk_level = "CRITICAL" if pred == 1 else "ROUTINE"
             
-            st.session_state.patients.append({
+            new_patient = {
                 "id": patient_id.strip() if patient_id.strip() else next_auto_id,
                 "room": room_no, "bed": bed_no, "risk": risk_level, "score": str(int((prob[1] if pred == 1 else prob[0]) * 10)),
                 "hr": "N/A", "rr": "N/A", "spo2": "N/A", "bp": "N/A", "temp": "N/A", "note": "NLP Text Triage Used",
                 "doctor": assigned_doc
-            })
+            }
+            st.session_state.patients.append(new_patient)
             save_database(st.session_state.patients)
             st.rerun()
 
