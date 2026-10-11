@@ -195,7 +195,7 @@ def get_next_sequential_id(patients_list):
         return str(max(existing_ids) + 1)
     return str(BASE_START_ID)
 
-# Always reload and clean database from CSV to keep session state in sync
+# Reload and clean database from CSV to keep state persistent across refreshes
 st.session_state.patients = clean_and_persist_patients(load_database())
 
 # --- 3. Load ML Models ---
@@ -237,7 +237,17 @@ if assessment_type == "Track A: Heart Disease":
     assigned_doc = "Dr. Rajesh Sharma (Cardiologist)"
     age = st.sidebar.slider("Age", 20, 100, 50)
     sex = st.sidebar.selectbox("Sex (1=M, 0=F)", [1, 0])
-    cp = st.sidebar.selectbox("Chest Pain (1-4)", [1, 2, 3, 4])
+    
+    # Replaced numerical selection with medical term dropdowns
+    cp_label_map = {
+        "typical angina": 1,
+        "atypical angina": 2,
+        "non-anginal": 3,
+        "asymptomatic": 4
+    }
+    cp_label = st.sidebar.selectbox("Chest Pain Type", list(cp_label_map.keys()))
+    cp = cp_label_map[cp_label]
+
     trestbps = st.sidebar.slider("Resting BP", 80, 200, 120)
     chol = st.sidebar.slider("Cholesterol", 100, 400, 200)
     fbs = st.sidebar.selectbox("Fasting Sugar >120?", [1, 0])
@@ -247,7 +257,15 @@ if assessment_type == "Track A: Heart Disease":
     oldpeak = st.sidebar.slider("ST Depression", 0.0, 6.0, 1.0)
     slope = st.sidebar.selectbox("ST Slope (1-3)", [1, 2, 3])
     ca = st.sidebar.slider("Major Vessels (0-3)", 0, 3, 0)
-    thal = st.sidebar.selectbox("Thal (3, 6, 7)", [3, 6, 7])
+    
+    # Replaced numerical selection with medical term dropdowns
+    thal_label_map = {
+        "normal": 3,
+        "fixed defect": 6,
+        "reversible defect": 7
+    }
+    thal_label = st.sidebar.selectbox("Thalassemia", list(thal_label_map.keys()))
+    thal = thal_label_map[thal_label]
     
     if st.sidebar.button("Run AI & Add Patient", disabled=is_bed_taken):
         if models['heart']:
