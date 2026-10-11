@@ -100,7 +100,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Interactive Cursor Injection (Green Concentric Halo) ---
+# --- Interactive Cursor Injection ---
 components.html("""
 <script>
     const doc = window.parent.document;
@@ -147,7 +147,6 @@ def save_database(patients_list):
         pass
 
 def clean_existing_patient_ids(patients_list):
-    """ Converts all old/random patient IDs in database to sequence 2717270+ """
     updated = False
     current_id = BASE_START_ID
     for p in patients_list:
@@ -215,6 +214,13 @@ with col_room:
 with col_bed:
     bed_no = st.selectbox("Select Bed No.", ["Bed 1", "Bed 2", "Bed 3", "Bed 4", "Bed 5"])
 
+# Check if selected ICU room & Bed combination is already occupied
+occupied_beds_set = {(p.get('room'), p.get('bed')) for p in st.session_state.patients}
+is_bed_taken = (room_no, bed_no) in occupied_beds_set
+
+if is_bed_taken:
+    st.sidebar.error(f"⚠️ {room_no} - {bed_no} is ALREADY OCCUPIED! Please select a different bed.")
+
 if assessment_type == "Track A: Heart Disease":
     age = st.sidebar.slider("Age", 20, 100, 50)
     sex = st.sidebar.selectbox("Sex (1=M, 0=F)", [1, 0])
@@ -230,7 +236,7 @@ if assessment_type == "Track A: Heart Disease":
     ca = st.sidebar.slider("Major Vessels (0-3)", 0, 3, 0)
     thal = st.sidebar.selectbox("Thal (3, 6, 7)", [3, 6, 7])
     
-    if st.sidebar.button("Run AI & Add Patient"):
+    if st.sidebar.button("Run AI & Add Patient", disabled=is_bed_taken):
         if models['heart']:
             input_data = pd.DataFrame([[age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal]], 
                                       columns=['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal'])
@@ -257,7 +263,7 @@ elif assessment_type == "Track B: Diabetes":
     dpf = st.sidebar.slider("Diabetes Pedigree", 0.0, 3.0, 0.5)
     age_d = st.sidebar.slider("Age", 21, 100, 33)
     
-    if st.sidebar.button("Run AI & Add Patient"):
+    if st.sidebar.button("Run AI & Add Patient", disabled=is_bed_taken):
         if models['diabetes']:
             input_data = pd.DataFrame([[preg, gluc, bp, skin, ins, bmi, dpf, age_d]], 
                                       columns=['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age'])
@@ -275,7 +281,7 @@ elif assessment_type == "Track B: Diabetes":
 
 elif assessment_type == "Track C: Text Triage":
     clinical_text = st.sidebar.text_area("Patient Notes / Symptoms:")
-    if st.sidebar.button("Run AI & Add Patient"):
+    if st.sidebar.button("Run AI & Add Patient", disabled=is_bed_taken):
         if models['text'] and clinical_text:
             pred = models['text'].predict([clinical_text])[0]
             prob = models['text'].predict_proba([clinical_text])[0]
@@ -296,10 +302,16 @@ sorted_patients = sorted(
     key=lambda x: (risk_priority.get(x.get('risk', 'ROUTINE'), 2), -int(x.get('score', 0)))
 )
 
-# Dynamic Bed Occupancy Calculation (4 ICUs x 5 Beds = 20 Total Beds)
+# Dynamic Bed Occupancy Calculation across 4 ICU Rooms (5 Beds Each = 20 Beds Total)
 TOTAL_ICU_BEDS = 20
 occupied_beds = len(sorted_patients)
 occupancy_rate = min(int((occupied_beds / TOTAL_ICU_BEDS) * 100), 100)
+
+icu_room_counts = {f"ICU {i}": 0 for i in range(1, 5)}
+for p in sorted_patients:
+    r = p.get('room', 'ICU 1')
+    if r in icu_room_counts:
+        icu_room_counts[r] += 1
 
 # --- 5. Dashboard View ---
 st.markdown("<h2 style='margin-bottom: 0px;'>❤️ ICU Command Center</h2>", unsafe_allow_html=True)
@@ -452,17 +464,16 @@ with right_col:
     
     st.markdown(grid_html, unsafe_allow_html=True)
 
-    st.markdown("#### 🏥 Bed Occupancy Gauge")
-    st.markdown(f"""
-        <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); text-align: center; margin-bottom: 20px;">
-            <div style="width: 130px; height: 130px; border-radius: 50%; border: 12px solid rgba(30, 41, 59, 0.8); border-top-color: #3b82f6; border-right-color: #10b981; border-bottom-color: #10b981; margin: 0 auto; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                <h2 style="margin: 0; font-family: 'JetBrains Mono', monospace; color: white; font-size: 32px;">{occupancy_rate}%</h2>
-                <span style="font-size: 10px; color: #94a3b8; font-weight: bold;">{occupied_beds} / {TOTAL_ICU_BEDS} BEDS</span>
-            </div>
-            <p style="color: #94a3b8; font-size: 13px; margin-top: 15px;">Real-time Ward Capacity</p>
-        </div>
-    """, unsafe_allow_html=True)
+    # 🏥 Bed Occupancy breakdown per ICU Room (ICU 1 - ICU 4)
+    st.markdown("#### 🏥 Room Bed Occupancy")
     
+    room_occupancy_df = pd.DataFrame({
+        "Beds Occupied": [icu_room_counts[f"ICU {i}"] for i in range(1, 5)],
+        "Available Beds": [5 - icu_room_counts[f"ICU {i}"] for i in range(1, 5)]
+    }, index=["ICU 1", "ICU 2", "ICU 3", "ICU 4"])
+    
+    st.bar_chart(room_occupancy_df, color=["#ef4444", "#10b981"], height=220)
+
     st.markdown("#### 📊 Dept Workload")
     components.html("""
         <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07); font-family: sans-serif;">
