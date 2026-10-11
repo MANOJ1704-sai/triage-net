@@ -28,7 +28,6 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
     }
 
-    /* Radio Button Custom Styling */
     section[data-testid="stSidebar"] [role="radiogroup"] {
         gap: 8px !important;
     }
@@ -375,20 +374,20 @@ with right_col:
             
         grid_html += f'<div title="Patient {p.get("id")} ({p.get("room", "")}-{p.get("bed", "")})" style="width: 14px; height: 14px; background-color: {color}; border-radius: 50%; box-shadow: 0 0 10px {shadow}; {anim}"></div>'
     
-    grid_html += """
+    grid_html += f"""
         <style>
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-            70% { transform: scale(1.2); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
+        @keyframes pulse {{
+            0% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
+            70% {{ transform: scale(1.2); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }}
+            100% {{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
+        }}
         </style>
     </div>
     <div style="display: flex; justify-content: space-between; margin-top: -10px; margin-bottom: 25px; font-size: 11px; color: #94a3b8; font-family: 'JetBrains Mono', monospace; font-weight: bold;">
+    <span><span style="color:#ef4444; font-size: 14px;">●</span> CRITICAL: {critical_count}</span>
+    <span><span style="color:#f59e0b; font-size: 14px;">●</span> HIGH: {high_count}</span>
+    <span><span style="color:#10b981; font-size: 14px;">●</span> ROUTINE: {low_count}</span></div>
     """
-    grid_html += f'<span><span style="color:#ef4444; font-size: 14px;">●</span> CRITICAL: {critical_count}</span>'
-    grid_html += f'<span><span style="color:#f59e0b; font-size: 14px;">●</span> HIGH: {high_count}</span>'
-    grid_html += f'<span><span style="color:#10b981; font-size: 14px;">●</span> ROUTINE: {low_count}</span></div>'
     
     st.markdown(grid_html, unsafe_allow_html=True)
 
@@ -406,4 +405,12 @@ with right_col:
     st.markdown("""
         <div style="background: rgba(19, 28, 46, 0.7); backdrop-filter: blur(12px); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.07);">
             <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Emergency</p>
-            <div style="background-color: rgba(30, 41, 59, 0.
+            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #ef4444; width: 85%; height: 100%; border-radius: 10px;"></div></div>
+            
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Cardiology</p>
+            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px; margin-bottom: 15px;"><div style="background-color: #3b82f6; width: 60%; height: 100%; border-radius: 10px;"></div></div>
+            
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 5px;">Neurology</p>
+            <div style="background-color: rgba(30, 41, 59, 0.8); border-radius: 10px; height: 10px;"><div style="background-color: #10b981; width: 40%; height: 100%; border-radius: 10px;"></div></div>
+        </div>
+    """, unsafe_allow_html=True)
